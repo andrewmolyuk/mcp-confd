@@ -5,6 +5,9 @@
   "description": "ConfD integration for MCP",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "mcp-confd": "dist/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/andrewmolyuk/mcp-confd.git"
