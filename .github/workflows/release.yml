@@ -1,26 +1,21 @@
-name: Test
+name: Release
 
 on:
   push:
-    branches: [next]
-  pull_request:
-    types: [opened, synchronize, reopened]
-
-permissions:
-  contents: read
+    branches: [main]
 
 jobs:
-  test:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
-      - name: Validate commit messages
-        uses: wagoid/commitlint-github-action@v6
-        with:
-          configFile: .commitlintrc
 
       - uses: actions/setup-node@v6
         with:
@@ -31,7 +26,11 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2.2.0
 
-      - run: make test
+      - run: make build
+
+      - run: bunx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:

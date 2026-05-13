@@ -1,7 +1,7 @@
 {
   "name": "mcp-confd",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "ConfD integration for MCP",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,7 +27,7 @@
     "prepare": "husky"
   },
   "files": [
-    "dist"
+    "dist", "README.md", "LICENSE.md"
   ],
   "devDependencies": {
     "@commitlint/cli": "^21.0.1",
