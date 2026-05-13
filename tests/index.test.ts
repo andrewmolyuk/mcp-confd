@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import "../src/index";
 
 describe("index", () => {
   it("should be true", () => {
