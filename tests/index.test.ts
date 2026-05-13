@@ -1,14 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createServer, isMainModule, ping, startServer } from "../src/index";
+import { createServer, startServer } from "../src/index";
+import { getSessionCookie, login, setSessionCookie } from "../src/tools/login";
+import { ping } from "../src/tools/ping";
 
 describe("index", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    setSessionCookie(null);
   });
 
   it("returns pong", () => {
@@ -21,7 +21,7 @@ describe("index", () => {
     const server = createServer();
 
     expect(server).toBeInstanceOf(McpServer);
-    expect(toolSpy).toHaveBeenCalledTimes(1);
+    expect(toolSpy).toHaveBeenCalledTimes(2);
 
     const [name, description, handler] = toolSpy.mock.calls[0] as [
       string,
@@ -46,14 +46,163 @@ describe("index", () => {
     expect(connectSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("treats symlinked argv path as entrypoint", () => {
-    const dir = mkdtempSync(join(tmpdir(), "mcp-confd-test-"));
-    const targetPath = join(dir, "target.js");
-    const linkPath = join(dir, "link.js");
+  it("calls ConfD login and stores session cookie", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Set-Cookie": "sessionid=sess123; Path=/; HttpOnly",
+        },
+      }),
+    );
 
-    writeFileSync(targetPath, "console.log('x')\n");
-    symlinkSync(targetPath, linkPath);
+    const result = await login({ user: "admin", passwd: "admin" });
 
-    expect(isMainModule(pathToFileURL(targetPath).href, linkPath)).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ sessionid: "sess123" });
+    expect(getSessionCookie()).toBe("sessionid=sess123; Path=/; HttpOnly");
   });
+
+  it("returns warning and challenge payload fields", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: {
+            warning: "Need acknowledgment",
+            challenge_id: "challenge-1",
+            challenge_prompt: "QWxhZGRpbjpPcGVuU2VzYW1l",
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      ),
+    );
+
+    const result = await login({ user: "admin", passwd: "admin", ack_warning: true });
+
+    expect(result.warning).toBe("Need acknowledgment");
+    expect(result.challenge_id).toBe("challenge-1");
+    expect(result.challenge_prompt).toBe("QWxhZGRpbjpPcGVuU2VzYW1l");
+  });
+
+  it("throws on JSON-RPC error response", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          error: {
+            code: -32000,
+            type: "rpc.method.failed",
+            message: "Method failed",
+            warning: "Password expires soon",
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      ),
+    );
+
+    await expect(login({ user: "admin", passwd: "bad" })).rejects.toThrow(
+      "[-32000] rpc.method.failed: Method failed Warning: Password expires soon",
+    );
+  });
+
+  it("uses env vars for host, port, and default credentials", async () => {
+    vi.stubEnv("MCP_CONFD_PROTOCOL", "http");
+    vi.stubEnv("MCP_CONFD_HOST", "localhost");
+    vi.stubEnv("MCP_CONFD_PORT", "8888");
+    vi.stubEnv("MCP_CONFD_USER", "admin");
+    vi.stubEnv("MCP_CONFD_PASSWORD", "admin");
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+    );
+
+    await login({});
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("http://localhost:8888/jsonrpc");
+
+    const request = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+    expect(typeof request.body).toBe("string");
+    expect(request.body).toContain('"user":"admin"');
+    expect(request.body).toContain('"passwd":"admin"');
+  });
+
+  it("uses https when MCP_CONFD_PROTOCOL is set to https", async () => {
+    vi.stubEnv("MCP_CONFD_PROTOCOL", "https");
+    vi.stubEnv("MCP_CONFD_HOST", "localhost");
+    vi.stubEnv("MCP_CONFD_PORT", "8888");
+    vi.stubEnv("MCP_CONFD_USER", "admin");
+    vi.stubEnv("MCP_CONFD_PASSWORD", "admin");
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+    );
+
+    await login({});
+
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("https://localhost:8888/jsonrpc");
+  });
+
+  it("fails when MCP_CONFD_PROTOCOL is invalid", async () => {
+    vi.stubEnv("MCP_CONFD_PROTOCOL", "ftp");
+    vi.stubEnv("MCP_CONFD_USER", "admin");
+    vi.stubEnv("MCP_CONFD_PASSWORD", "admin");
+
+    await expect(login({})).rejects.toThrow("MCP_CONFD_PROTOCOL must be http or https");
+  });
+
+  it("ignores TLS verification when MCP_CONFD_IGNORE_SSL_ERRORS is enabled", async () => {
+    vi.stubEnv("MCP_CONFD_PROTOCOL", "https");
+    vi.stubEnv("MCP_CONFD_HOST", "localhost");
+    vi.stubEnv("MCP_CONFD_PORT", "8888");
+    vi.stubEnv("MCP_CONFD_USER", "admin");
+    vi.stubEnv("MCP_CONFD_PASSWORD", "admin");
+    vi.stubEnv("MCP_CONFD_IGNORE_SSL_ERRORS", "true");
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBe("0");
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    });
+
+    await login({});
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
+  });
+
+  it("fails when credentials are missing in both params and env", async () => {
+    await expect(login({})).rejects.toThrow(
+      "login requires user, provide params.user or MCP_CONFD_USER",
+    );
+  });
+
 });

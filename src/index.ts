@@ -2,24 +2,31 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { registerTools } from "./register.js";
 
-export function ping(): string {
-	return "pong";
+function getPackageVersion(): string {
+	try {
+		const packageJsonPath = fileURLToPath(new URL("../package.json", import.meta.url));
+		const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+			version?: string;
+		};
+		return packageJson.version ?? "0.0.0";
+	} catch {
+		return "0.0.0";
+	}
 }
+
+const SERVER_VERSION = getPackageVersion();
 
 export function createServer(): McpServer {
 	const server = new McpServer({
 		name: "mcp-confd",
-		version: "0.0.1",
+		version: SERVER_VERSION,
 	});
 
-	server.tool("ping", "Basic health-check endpoint", () => {
-		return {
-			content: [{ type: "text", text: ping() }],
-		};
-	});
+	registerTools(server);
 
 	return server;
 }
@@ -30,7 +37,7 @@ export async function startServer(): Promise<void> {
 	await server.connect(transport);
 }
 
-export function isMainModule(importMetaUrl: string, argvPath?: string): boolean {
+function isMainModule(importMetaUrl: string, argvPath?: string): boolean {
 	if (typeof argvPath !== "string") {
 		return false;
 	}

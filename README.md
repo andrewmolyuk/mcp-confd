@@ -12,7 +12,7 @@ Basic MCP server skeleton for ConfD integration.
 ## Features
 
 - MCP server over stdio
-- Single tool: ping
+- Tools: ping, login
 
 ## Development
 
@@ -38,3 +38,36 @@ ping:
 
 - Input: none
 - Output: text "pong"
+
+login:
+
+- Input:
+	- `user` (string, optional if `MCP_CONFD_USER` is set)
+	- `passwd` (string, optional if `MCP_CONFD_PASSWORD` is set)
+	- `ack_warning` (boolean, optional, default `false`)
+- Output: JSON string with optional fields:
+	- `warning`
+	- `challenge_id`
+	- `challenge_prompt`
+	- `sessionid` (parsed from `Set-Cookie`)
+
+### ConfD endpoint
+
+The `login` tool sends a JSON-RPC `login` request to:
+
+- `$MCP_CONFD_PROTOCOL://$MCP_CONFD_HOST:$MCP_CONFD_PORT/jsonrpc`
+
+Defaults:
+
+- `MCP_CONFD_PROTOCOL=http`
+- `MCP_CONFD_HOST=127.0.0.1`
+- `MCP_CONFD_PORT=8008`
+
+Supported environment variables:
+
+- `MCP_CONFD_PROTOCOL` (`http` or `https`)
+- `MCP_CONFD_HOST`
+- `MCP_CONFD_PORT`
+- `MCP_CONFD_USER`
+- `MCP_CONFD_PASSWORD`
+- `MCP_CONFD_IGNORE_SSL_ERRORS` (`true`/`1`/`yes` to skip TLS cert validation for self-signed HTTPS)
