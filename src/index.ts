@@ -2,7 +2,8 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { pathToFileURL } from "node:url";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 export function ping(): string {
 	return "pong";
@@ -29,9 +30,19 @@ export async function startServer(): Promise<void> {
 	await server.connect(transport);
 }
 
-const isEntrypoint =
-	typeof process.argv[1] === "string" &&
-	import.meta.url === pathToFileURL(process.argv[1]).href;
+export function isMainModule(importMetaUrl: string, argvPath?: string): boolean {
+	if (typeof argvPath !== "string") {
+		return false;
+	}
+
+	try {
+		return realpathSync(fileURLToPath(importMetaUrl)) === realpathSync(argvPath);
+	} catch {
+		return false;
+	}
+}
+
+const isEntrypoint = isMainModule(import.meta.url, process.argv[1]);
 
 if (isEntrypoint) {
 	await startServer();

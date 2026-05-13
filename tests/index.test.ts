@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createServer, ping, startServer } from "../src/index";
+import { createServer, isMainModule, ping, startServer } from "../src/index";
 
 describe("index", () => {
   afterEach(() => {
@@ -40,5 +44,16 @@ describe("index", () => {
     await startServer();
 
     expect(connectSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats symlinked argv path as entrypoint", () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-confd-test-"));
+    const targetPath = join(dir, "target.js");
+    const linkPath = join(dir, "link.js");
+
+    writeFileSync(targetPath, "console.log('x')\n");
+    symlinkSync(targetPath, linkPath);
+
+    expect(isMainModule(pathToFileURL(targetPath).href, linkPath)).toBe(true);
   });
 });
