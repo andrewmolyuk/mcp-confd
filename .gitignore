@@ -1,0 +1,13 @@
+# Node
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Build
+dist/
+*.tsbuildinfo
+
+# Tests 
+coverage/

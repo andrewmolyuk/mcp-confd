@@ -1,0 +1,24 @@
+{
+  "name": "mcp-confd",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "postCreateCommand": "make install",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.oxc": "always"
+        }
+      },
+      "extensions": [
+        "oxc.oxc-vscode"
+      ]
+    }
+  },
+  "mounts": [
+    "source=${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,type=bind,consistency=cached",
+    "source=/run/host-services/ssh-auth.sock,target=/ssh-agent.sock,type=bind,consistency=cached"
+  ]
+}

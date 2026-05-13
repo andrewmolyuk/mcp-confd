@@ -1,0 +1,50 @@
+{
+  "name": "mcp-confd",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "ConfD integration for MCP",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrewmolyuk/mcp-confd.git"
+  },
+  "keywords": [
+    "confd",
+    "mcp"
+  ],
+  "author": "Andrew Molyuk",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/andrewmolyuk/mcp-confd/issues"
+  },
+  "homepage": "https://github.com/andrewmolyuk/mcp-confd#readme",
+  "scripts": {
+    "lint": "make lint",
+    "test": "make test",
+    "build": "make build",
+    "update": "make update",
+    "prepare": "husky"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.8",
+    "@semantic-release/npm": "^13.1.5",
+    "@types/bun": "latest",
+    "@vitest/coverage-v8": "^4.1.5",
+    "husky": "^9.1.7",
+    "npm-check-updates": "^22.2.0",
+    "oxlint": "^1.64.0",
+    "semantic-release": "^25.0.3",
+    "vitest": "^4.1.5"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
