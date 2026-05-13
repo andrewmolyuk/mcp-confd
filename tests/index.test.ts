@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import "../src/index";
+import { ping } from "../src/index";
 
 describe("index", () => {
-  it("should be true", () => {
-    expect(true).toBe(true);
+  it("returns pong", () => {
+    expect(ping()).toBe("pong");
   });
 });

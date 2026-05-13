@@ -1,4 +1,4 @@
-.PHONY: install lint test build update next merge
+.PHONY: install lint test build dev update clean next merge
 
 install:
 	bun install --no-audit --no-fund
@@ -12,6 +12,9 @@ test: lint
 build: test
 	rm -Rf dist
 	bunx tsc --build
+
+dev: install
+	npx @modelcontextprotocol/inspector bun --watch src/index.ts
 
 update: 
 	bunx npm-check-updates -u 

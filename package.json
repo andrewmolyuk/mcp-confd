@@ -27,11 +27,14 @@
     "prepare": "husky"
   },
   "files": [
-    "dist", "README.md", "LICENSE.md"
+    "dist",
+    "README.md",
+    "LICENSE.md"
   ],
   "devDependencies": {
     "@commitlint/cli": "^21.0.1",
     "@commitlint/config-conventional": "^21.0.1",
+    "@modelcontextprotocol/inspector": "^0.21.2",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.8",
@@ -46,5 +49,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
   }
 }
