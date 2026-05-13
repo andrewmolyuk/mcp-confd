@@ -12,7 +12,7 @@ export function createServer(): McpServer {
 		version: "0.0.1",
 	});
 
-	server.tool("ping", "Basic health-check endpoint", async () => {
+	server.tool("ping", "Basic health-check endpoint", () => {
 		return {
 			content: [{ type: "text", text: ping() }],
 		};
