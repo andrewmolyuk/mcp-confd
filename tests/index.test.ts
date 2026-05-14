@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createServer, startServer } from "../src/index";
+import { getTrans } from "../src/tools/getTrans";
 import { getSessionCookie, login, setSessionCookie } from "../src/tools/login";
 import { logout } from "../src/tools/logout";
 import { ping } from "../src/tools/ping";
@@ -22,7 +23,7 @@ describe("index", () => {
     const server = createServer();
 
     expect(server).toBeInstanceOf(McpServer);
-    expect(toolSpy).toHaveBeenCalledTimes(3);
+    expect(toolSpy).toHaveBeenCalledTimes(4);
 
     const [name, description, handler] = toolSpy.mock.calls[0] as [
       string,
@@ -92,6 +93,43 @@ describe("index", () => {
 
     await expect(logout()).resolves.toEqual({});
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns open transactions from get_trans", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: {
+            trans: [
+              { db: "running", mode: "read_write", conf_mode: "private", tag: "", th: 2 },
+            ],
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await getTrans();
+
+    expect(result.trans).toHaveLength(1);
+    expect(result.trans[0]).toMatchObject({ db: "running", mode: "read_write", th: 2 });
+  });
+
+  it("returns empty trans list from get_trans when no open transactions", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: { trans: [] } }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await getTrans();
+
+    expect(result.trans).toEqual([]);
   });
 
   it("returns warning and challenge payload fields", async () => {
