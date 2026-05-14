@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { deleteTrans } from "../src/tools/deleteTrans";
+import { getModulePrefixMap } from "../src/tools/getModulePrefixMap";
 import { getSchema } from "../src/tools/getSchema";
 import { getTrans } from "../src/tools/getTrans";
 import { setSessionCookie } from "../src/tools/login";
@@ -29,6 +30,36 @@ describe("transactions and schema", () => {
 
     expect(result.trans).toHaveLength(1);
     expect(result.trans[0]).toMatchObject({ db: "running", mode: "read_write", th: 2 });
+  });
+
+  it("gets module prefix map via get_module_prefix_map", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: {
+            module_prefix_map: [
+              {
+                module: "ietf-interfaces",
+                prefix: "if",
+                namespace: "urn:ietf:params:xml:ns:yang:ietf-interfaces",
+              },
+            ],
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await getModulePrefixMap();
+
+    expect(result.module_prefix_map).toHaveLength(1);
+    expect(result.module_prefix_map[0]).toEqual({
+      module: "ietf-interfaces",
+      prefix: "if",
+      namespace: "urn:ietf:params:xml:ns:yang:ietf-interfaces",
+    });
   });
 
   it("accepts minimal transaction shape from get_trans", async () => {

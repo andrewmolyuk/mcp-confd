@@ -12,17 +12,19 @@ Basic MCP server skeleton for ConfD integration.
 ## Features
 
 - MCP server over stdio
-- Tools: ping, login, logout, get_trans, new_trans, delete_trans
+- Tools: set of pre-defined operations callable by MCP clients, see Tools section below for details 
 - Session-aware ConfD JSON-RPC integration with cookie-based authentication
 
-## Tool Behavior Notes
+## Tool
 
-- [`ping`](./docs/tools/ping.md): Basic health check, returns `pong`.
-- [`login`](./docs/tools/login.md): Calls ConfD `login`, stores `sessionid` cookie from `Set-Cookie`, returns session/challenge fields.
-- [`logout`](./docs/tools/logout.md): If no local session is set, returns `{}` without RPC call. If a session exists, calls ConfD `logout`, clears local cookie, and propagates ConfD errors.
-- [`get_trans`](./docs/tools/get_trans.md): Calls ConfD `get_trans` and returns transaction list. If there are no open transactions, returns an empty `trans` array. If session is missing/invalid, propagates ConfD session errors.
-- [`new_trans`](./docs/tools/new_trans.md): Requires an active local session cookie. Fails fast with a helpful error when no session is active.
-- [`delete_trans`](./docs/tools/delete_trans.md): Requires an active local session cookie. Fails fast with a helpful error when no session is active.
+- [ping](./docs/tools/ping.md)
+- [login](./docs/tools/login.md)
+- [logout](./docs/tools/logout.md)
+- [get_trans](./docs/tools/get_trans.md)
+- [new_trans](./docs/tools/new_trans.md)
+- [delete_trans](./docs/tools/delete_trans.md)
+- [get_module_prefix_map](./docs/tools/get_module_prefix_map.md)
+- [get_schema](./docs/tools/get_schema.md)
 
 ## ConfD Configuration
 

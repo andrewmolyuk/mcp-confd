@@ -17,7 +17,7 @@ JSON string with optional fields:
 - `challenge_prompt`
 - `sessionid` (parsed from `Set-Cookie`)
 
-## Login Request Details
+## Behavior
 
 The tool calls ConfD JSON-RPC method `login` on `/jsonrpc` and:
 
@@ -33,7 +33,7 @@ If ConfD returns a JSON-RPC error object, the tool raises an error that includes
 - `message`
 - `warning` (when present)
 
-## Authentication Challenge Behavior
+### Authentication Challenge Behavior
 
 ConfD may require challenge-based authentication. In that case:
 

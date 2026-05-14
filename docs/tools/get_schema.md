@@ -19,6 +19,8 @@ Exports a JSON schema for a selected part (or all) of a YANG module from an acti
 Notes:
 - `th` is required.
 - At least one of `namespace` or `path` must be provided.
+- To export an entire module, use `namespace` (without `path`) and set `levels` to `-1`.
+- Use `get_module_prefix_map` first to discover valid module namespaces.
 
 ## Output
 
