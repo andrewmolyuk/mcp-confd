@@ -17,7 +17,7 @@ describe("server", () => {
     const server = createServer();
 
     expect(server).toBeInstanceOf(McpServer);
-    expect(toolSpy).toHaveBeenCalledTimes(8);
+    expect(toolSpy).toHaveBeenCalledTimes(9);
 
     const [name, description, handler] = toolSpy.mock.calls[0] as [
       string,

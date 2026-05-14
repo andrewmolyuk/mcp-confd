@@ -7,6 +7,7 @@ import { registerLoginTool } from "./tools/login.js";
 import { registerLogoutTool } from "./tools/logout.js";
 import { registerNewTransTool } from "./tools/newTrans.js";
 import { registerPingTool } from "./tools/ping.js";
+import { registerQueryTool } from "./tools/query.js";
 
 export function registerTools(server: McpServer): void {
 	registerPingTool(server);
@@ -14,6 +15,7 @@ export function registerTools(server: McpServer): void {
 	registerLogoutTool(server);
 	registerGetModulePrefixMapTool(server);
 	registerGetTransTool(server);
+	registerQueryTool(server);
 	registerGetSchemaTool(server);
 	registerNewTransTool(server);
 	registerDeleteTransTool(server);

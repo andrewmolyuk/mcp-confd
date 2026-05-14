@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { deleteTrans } from "../src/tools/deleteTrans";
 import { getModulePrefixMap } from "../src/tools/getModulePrefixMap";
+import { query } from "../src/tools/query";
 import { getSchema } from "../src/tools/getSchema";
 import { getTrans } from "../src/tools/getTrans";
 import { setSessionCookie } from "../src/tools/login";
@@ -60,6 +61,66 @@ describe("transactions and schema", () => {
       prefix: "if",
       namespace: "urn:ietf:params:xml:ns:yang:ietf-interfaces",
     });
+  });
+
+  it("runs query via query method", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: {
+            current_position: 2,
+            total_number_of_results: 4,
+            number_of_results: 2,
+            number_of_elements_per_result: 2,
+            result: [["foo", "bar"]],
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await query({
+      th: 1,
+      xpath_expr: "/dhcp:dhcp/dhcp:foo",
+      result_as: "keypath-value",
+      chunk_size: 2,
+    });
+
+    expect(result).toMatchObject({
+      current_position: 2,
+      total_number_of_results: 4,
+      number_of_results: 2,
+    });
+
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.method).toBe("query");
+    expect(body.params).toMatchObject({
+      th: 1,
+      xpath_expr: "/dhcp:dhcp/dhcp:foo",
+      result_as: "keypath-value",
+      chunk_size: 2,
+    });
+  });
+
+  it("fails query when no active session", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    await expect(query({ th: 1, xpath_expr: "/dhcp:dhcp/dhcp:foo" })).rejects.toThrow(
+      "query requires an active session, call login first",
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails query when neither xpath_expr nor path is provided", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    await expect(query({ th: 1 })).rejects.toThrow(
+      "query requires either xpath_expr or path",
+    );
   });
 
   it("accepts minimal transaction shape from get_trans", async () => {
