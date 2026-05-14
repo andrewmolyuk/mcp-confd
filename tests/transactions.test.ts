@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { deleteTrans } from "../src/tools/deleteTrans";
 import { getModulePrefixMap } from "../src/tools/getModulePrefixMap";
 import { query } from "../src/tools/query";
+import { runAction } from "../src/tools/runAction";
 import { getSchema } from "../src/tools/getSchema";
 import { getTrans } from "../src/tools/getTrans";
 import { setSessionCookie } from "../src/tools/login";
@@ -121,6 +122,58 @@ describe("transactions and schema", () => {
     await expect(query({ th: 1 })).rejects.toThrow(
       "query requires either xpath_expr or path",
     );
+  });
+
+  it("runs action via run_action method", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: [
+            { name: "systemClock", value: "0000-00-00T03:00:00+00:00" },
+            { name: "hardwareClock", value: "0000-00-00T04:00:00+00:00" },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await runAction({
+      th: 2,
+      path: "/dhcp:dhcp/set-clock",
+      params: { clockSettings: "2014-02-11T14:20:53.460+01:00" },
+      format: "normal",
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.method).toBe("run_action");
+    expect(body.params).toMatchObject({
+      th: 2,
+      path: "/dhcp:dhcp/set-clock",
+      params: { clockSettings: "2014-02-11T14:20:53.460+01:00" },
+      format: "normal",
+    });
+  });
+
+  it("fails run_action when no active session", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    await expect(runAction({ th: 2, path: "/dhcp:dhcp/set-clock" })).rejects.toThrow(
+      "run_action requires an active session, call login first",
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails run_action when comet_id or handle is missing its pair", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    await expect(
+      runAction({ th: 2, path: "/dhcp:dhcp/set-clock", comet_id: "comet-1" }),
+    ).rejects.toThrow("run_action requires both comet_id and handle when one is provided");
   });
 
   it("accepts minimal transaction shape from get_trans", async () => {

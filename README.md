@@ -26,6 +26,7 @@ Basic MCP server skeleton for ConfD integration.
 - [get_module_prefix_map](./docs/tools/get_module_prefix_map.md)
 - [get_schema](./docs/tools/get_schema.md)
 - [query](./docs/tools/query.md)
+- [run_action](./docs/tools/run_action.md)
 
 ## ConfD Configuration
 
