@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createServer, startServer } from "../src/index";
 import { deleteTrans } from "../src/tools/deleteTrans";
+import { getSchema } from "../src/tools/getSchema";
 import { getTrans } from "../src/tools/getTrans";
 import { getSessionCookie, login, setSessionCookie } from "../src/tools/login";
 import { logout } from "../src/tools/logout";
@@ -25,7 +26,7 @@ describe("index", () => {
     const server = createServer();
 
     expect(server).toBeInstanceOf(McpServer);
-    expect(toolSpy).toHaveBeenCalledTimes(6);
+    expect(toolSpy).toHaveBeenCalledTimes(7);
 
     const [name, description, handler] = toolSpy.mock.calls[0] as [
       string,
@@ -191,6 +192,53 @@ describe("index", () => {
     const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string);
     expect(body.method).toBe("new_trans");
     expect(body.params).toMatchObject({ db: "running", mode: "read" });
+  });
+
+  it("gets schema via get_schema", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: {
+            meta: { namespace: "http://example.com/ns" },
+            data: { root: { type: "container" } },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await getSchema({ th: 2, path: "/dhcp:dhcp", levels: 1 });
+
+    expect(result).toMatchObject({
+      meta: { namespace: "http://example.com/ns" },
+      data: { root: { type: "container" } },
+    });
+
+    const request = fetchSpy.mock.calls[0][1] as RequestInit;
+    const body = JSON.parse(request.body as string);
+    expect(body.method).toBe("get_schema");
+    expect(body.params).toMatchObject({ th: 2, path: "/dhcp:dhcp", levels: 1 });
+  });
+
+  it("fails get_schema when no active session", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    await expect(getSchema({ th: 2, path: "/dhcp:dhcp" })).rejects.toThrow(
+      "get_schema requires an active session, call login first",
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails get_schema when neither namespace nor path is provided", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    await expect(getSchema({ th: 2 })).rejects.toThrow(
+      "get_schema requires either namespace or path",
+    );
   });
 
   it("deletes a transaction via delete_trans", async () => {
