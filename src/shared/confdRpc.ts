@@ -1,6 +1,4 @@
-const DEFAULT_CONFD_HOST = "127.0.0.1";
-const DEFAULT_CONFD_PORT = "8008";
-const DEFAULT_CONFD_PROTOCOL = "http";
+const DEFAULT_CONFD_JSONRPC_URL = "http://127.0.0.1:8008/jsonrpc";
 
 export interface JsonRpcErrorResponse {
 	error: {
@@ -30,16 +28,20 @@ export function jsonRpcErrorMessage(error: JsonRpcErrorResponse["error"]): strin
 }
 
 export function getConfdJsonRpcUrlFromEnv(env: NodeJS.ProcessEnv = process.env): string {
-	const rawProtocol = env.MCP_CONFD_PROTOCOL ?? DEFAULT_CONFD_PROTOCOL;
-	const normalizedProtocol = rawProtocol.toLowerCase();
+	const rawUrl = env.MCP_CONFD_URL ?? DEFAULT_CONFD_JSONRPC_URL;
 
-	if (normalizedProtocol !== "http" && normalizedProtocol !== "https") {
-		throw new Error("MCP_CONFD_PROTOCOL must be http or https");
+	let parsedUrl: URL;
+	try {
+		parsedUrl = new URL(rawUrl);
+	} catch {
+		throw new Error("MCP_CONFD_URL must be a valid URL");
 	}
 
-	const host = env.MCP_CONFD_HOST ?? DEFAULT_CONFD_HOST;
-	const port = env.MCP_CONFD_PORT ?? DEFAULT_CONFD_PORT;
-	return `${normalizedProtocol}://${host}:${port}/jsonrpc`;
+	if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+		throw new Error("MCP_CONFD_URL must start with http:// or https://");
+	}
+
+	return rawUrl;
 }
 
 export function shouldIgnoreTlsErrors(env: NodeJS.ProcessEnv = process.env): boolean {

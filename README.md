@@ -48,21 +48,17 @@ See tool documentation in [docs/tools/README.md](docs/tools/README.md).
 
 ## ConfD Configuration
 
-The login flow targets ConfD JSON-RPC endpoint:
+The tools call the ConfD JSON-RPC endpoint configured by:
 
-- `$MCP_CONFD_PROTOCOL://$MCP_CONFD_HOST:$MCP_CONFD_PORT/jsonrpc`
+- `MCP_CONFD_URL`
 
 Defaults:
 
-- `MCP_CONFD_PROTOCOL=http`
-- `MCP_CONFD_HOST=127.0.0.1`
-- `MCP_CONFD_PORT=8008`
+- `MCP_CONFD_URL=http://127.0.0.1:8008/jsonrpc`
 
 Supported environment variables:
 
-- `MCP_CONFD_PROTOCOL` (`http` or `https`)
-- `MCP_CONFD_HOST`
-- `MCP_CONFD_PORT`
+- `MCP_CONFD_URL` (`http://...` or `https://...`)
 - `MCP_CONFD_USER`
 - `MCP_CONFD_PASSWORD`
 - `MCP_CONFD_IGNORE_SSL_ERRORS` (`true`/`1`/`yes` to skip TLS cert validation for self-signed HTTPS)

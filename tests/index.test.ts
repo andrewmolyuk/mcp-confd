@@ -285,10 +285,8 @@ describe("index", () => {
     );
   });
 
-  it("uses env vars for host, port, and default credentials", async () => {
-    vi.stubEnv("MCP_CONFD_PROTOCOL", "http");
-    vi.stubEnv("MCP_CONFD_HOST", "localhost");
-    vi.stubEnv("MCP_CONFD_PORT", "8888");
+  it("uses MCP_CONFD_URL and default credentials from env", async () => {
+    vi.stubEnv("MCP_CONFD_URL", "http://localhost:8888/jsonrpc");
     vi.stubEnv("MCP_CONFD_USER", "admin");
     vi.stubEnv("MCP_CONFD_PASSWORD", "admin");
 
@@ -312,10 +310,8 @@ describe("index", () => {
     expect(request.body).toContain('"passwd":"admin"');
   });
 
-  it("uses https when MCP_CONFD_PROTOCOL is set to https", async () => {
-    vi.stubEnv("MCP_CONFD_PROTOCOL", "https");
-    vi.stubEnv("MCP_CONFD_HOST", "localhost");
-    vi.stubEnv("MCP_CONFD_PORT", "8888");
+  it("uses https when MCP_CONFD_URL is https", async () => {
+    vi.stubEnv("MCP_CONFD_URL", "https://localhost:8888/jsonrpc");
     vi.stubEnv("MCP_CONFD_USER", "admin");
     vi.stubEnv("MCP_CONFD_PASSWORD", "admin");
 
@@ -333,18 +329,26 @@ describe("index", () => {
     expect(fetchSpy.mock.calls[0]?.[0]).toBe("https://localhost:8888/jsonrpc");
   });
 
-  it("fails when MCP_CONFD_PROTOCOL is invalid", async () => {
-    vi.stubEnv("MCP_CONFD_PROTOCOL", "ftp");
+  it("fails when MCP_CONFD_URL is invalid", async () => {
+    vi.stubEnv("MCP_CONFD_URL", "not-a-url");
     vi.stubEnv("MCP_CONFD_USER", "admin");
     vi.stubEnv("MCP_CONFD_PASSWORD", "admin");
 
-    await expect(login({})).rejects.toThrow("MCP_CONFD_PROTOCOL must be http or https");
+    await expect(login({})).rejects.toThrow("MCP_CONFD_URL must be a valid URL");
+  });
+
+  it("fails when MCP_CONFD_URL uses unsupported protocol", async () => {
+    vi.stubEnv("MCP_CONFD_URL", "ftp://localhost:8888/jsonrpc");
+    vi.stubEnv("MCP_CONFD_USER", "admin");
+    vi.stubEnv("MCP_CONFD_PASSWORD", "admin");
+
+    await expect(login({})).rejects.toThrow(
+      "MCP_CONFD_URL must start with http:// or https://",
+    );
   });
 
   it("ignores TLS verification when MCP_CONFD_IGNORE_SSL_ERRORS is enabled", async () => {
-    vi.stubEnv("MCP_CONFD_PROTOCOL", "https");
-    vi.stubEnv("MCP_CONFD_HOST", "localhost");
-    vi.stubEnv("MCP_CONFD_PORT", "8888");
+    vi.stubEnv("MCP_CONFD_URL", "https://localhost:8888/jsonrpc");
     vi.stubEnv("MCP_CONFD_USER", "admin");
     vi.stubEnv("MCP_CONFD_PASSWORD", "admin");
     vi.stubEnv("MCP_CONFD_IGNORE_SSL_ERRORS", "true");
