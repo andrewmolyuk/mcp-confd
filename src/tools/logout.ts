@@ -1,15 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import {
-	getConfdJsonRpcUrlFromEnv,
-	jsonRpcErrorMessage,
-	withOptionalTlsBypass,
-	type JsonRpcErrorResponse,
-} from "../shared/confdRpc.js";
-import {
-	getRequestCookieHeaderValue,
-	getSessionCookie,
-	setSessionCookie,
-} from "../shared/sessionCookie.js";
+import { ConfdRpcError, getConfdJsonRpcUrlFromEnv } from "../shared/confdRpc.js";
+import { callConfdJsonRpc } from "../shared/jsonRpcClient.js";
+import { getSessionCookie, setSessionCookie } from "../shared/sessionCookie.js";
 
 export async function logout(baseUrl = getConfdJsonRpcUrlFromEnv()): Promise<{}> {
 	const storedCookie = getSessionCookie();
@@ -17,31 +9,13 @@ export async function logout(baseUrl = getConfdJsonRpcUrlFromEnv()): Promise<{}>
 		return {};
 	}
 
-	const payload = {
-		jsonrpc: "2.0",
-		id: 1,
-		method: "logout",
-	};
-
-	const response = await withOptionalTlsBypass(baseUrl, async () =>
-		fetch(baseUrl, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Cookie: getRequestCookieHeaderValue(storedCookie),
-			},
-			body: JSON.stringify(payload),
-		}),
-	);
-
-	const responseBody = (await response.json()) as { result?: {} } | JsonRpcErrorResponse;
-
-	if ("error" in responseBody && responseBody.error) {
-		if (responseBody.error.type === "session.invalid_sessionid") {
+	try {
+		await callConfdJsonRpc(baseUrl, "logout");
+	} catch (e) {
+		if (e instanceof ConfdRpcError && e.errorType === "session.invalid_sessionid") {
 			setSessionCookie(null);
 		}
-
-		throw new Error(jsonRpcErrorMessage(responseBody.error));
+		throw e;
 	}
 
 	setSessionCookie(null);

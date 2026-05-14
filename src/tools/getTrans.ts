@@ -1,14 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import {
-	getConfdJsonRpcUrlFromEnv,
-	jsonRpcErrorMessage,
-	withOptionalTlsBypass,
-	type JsonRpcErrorResponse,
-} from "../shared/confdRpc.js";
-import {
-	getRequestCookieHeaderValue,
-	getSessionCookie,
-} from "../shared/sessionCookie.js";
+import { ConfdRpcError, getConfdJsonRpcUrlFromEnv } from "../shared/confdRpc.js";
+import { callConfdJsonRpc } from "../shared/jsonRpcClient.js";
 
 export interface Transaction {
 	db: "running" | "startup" | "candidate";
@@ -23,42 +15,15 @@ export interface GetTransResponse {
 }
 
 export async function getTrans(baseUrl = getConfdJsonRpcUrlFromEnv()): Promise<GetTransResponse> {
-	const storedCookie = getSessionCookie();
-
-	const headers: Record<string, string> = {
-		"Content-Type": "application/json",
-	};
-
-	if (typeof storedCookie === "string" && storedCookie.length > 0) {
-		headers.Cookie = getRequestCookieHeaderValue(storedCookie);
+	try {
+		const result = await callConfdJsonRpc<GetTransResponse>(baseUrl, "get_trans");
+		return result ?? { trans: [] };
+	} catch (e) {
+		if (e instanceof ConfdRpcError && e.errorType === "session.invalid_sessionid") {
+			return { trans: [] };
+		}
+		throw e;
 	}
-
-	const response = await withOptionalTlsBypass(baseUrl, async () =>
-		fetch(baseUrl, {
-			method: "POST",
-			headers,
-			body: JSON.stringify({
-				jsonrpc: "2.0",
-				id: 1,
-				method: "get_trans",
-			}),
-		}),
-	);
-
-	const responseBody = (await response.json()) as
-		| { result?: GetTransResponse }
-		| JsonRpcErrorResponse;
-
-	if ("error" in responseBody && responseBody.error) {
-		throw new Error(jsonRpcErrorMessage(responseBody.error));
-	}
-
-	const result =
-		"result" in responseBody && responseBody.result
-			? responseBody.result
-			: { trans: [] };
-
-	return result;
 }
 
 export function registerGetTransTool(server: McpServer): void {

@@ -1,9 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createServer, startServer } from "../src/index";
+import { deleteTrans } from "../src/tools/deleteTrans";
 import { getTrans } from "../src/tools/getTrans";
 import { getSessionCookie, login, setSessionCookie } from "../src/tools/login";
 import { logout } from "../src/tools/logout";
+import { newTrans } from "../src/tools/newTrans";
 import { ping } from "../src/tools/ping";
 
 describe("index", () => {
@@ -23,7 +25,7 @@ describe("index", () => {
     const server = createServer();
 
     expect(server).toBeInstanceOf(McpServer);
-    expect(toolSpy).toHaveBeenCalledTimes(4);
+    expect(toolSpy).toHaveBeenCalledTimes(6);
 
     const [name, description, handler] = toolSpy.mock.calls[0] as [
       string,
@@ -130,6 +132,79 @@ describe("index", () => {
     const result = await getTrans();
 
     expect(result.trans).toEqual([]);
+  });
+
+  it("returns empty trans list from get_trans on invalid session", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          error: { code: -32000, type: "session.invalid_sessionid", message: "Invalid sessionid" },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await getTrans();
+
+    expect(result.trans).toEqual([]);
+  });
+
+  it("creates a new read transaction via new_trans", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: 42 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await newTrans({ db: "running", mode: "read" });
+
+    expect(result).toEqual({ th: 42 });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.method).toBe("new_trans");
+    expect(body.params).toMatchObject({ db: "running", mode: "read" });
+  });
+
+  it("deletes a transaction via delete_trans", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await deleteTrans(42);
+
+    expect(result).toEqual({});
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const body = JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.method).toBe("delete_trans");
+    expect(body.params).toEqual({ th: 42 });
+  });
+
+  it("fails new_trans with helpful message when session is invalid", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    await expect(newTrans()).rejects.toThrow(
+      "new_trans requires an active session, call login first",
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails delete_trans with helpful message when no active session", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    await expect(deleteTrans(42)).rejects.toThrow(
+      "delete_trans requires an active session, call login first",
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("returns warning and challenge payload fields", async () => {

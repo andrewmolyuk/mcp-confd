@@ -11,6 +11,16 @@ export interface JsonRpcErrorResponse {
 	};
 }
 
+export class ConfdRpcError extends Error {
+	constructor(
+		message: string,
+		public readonly errorType?: string,
+	) {
+		super(message);
+		this.name = "ConfdRpcError";
+	}
+}
+
 export function jsonRpcErrorMessage(error: JsonRpcErrorResponse["error"]): string {
 	const message = error.message ?? "Method failed";
 	const warningSuffix = error.warning ? ` Warning: ${error.warning}` : "";
