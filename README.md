@@ -17,12 +17,29 @@ Basic MCP server skeleton for ConfD integration.
 
 ## Tool Behavior Notes
 
-- `ping`: Basic health check, returns `pong`.
-- `login`: Calls ConfD `login`, stores `sessionid` cookie from `Set-Cookie`, returns session/challenge fields.
-- `logout`: If no local session is set, returns `{}` without RPC call. If a session exists, calls ConfD `logout`, clears local cookie, and propagates ConfD errors.
-- `get_trans`: Calls ConfD `get_trans` and returns transaction list. If there are no open transactions, returns an empty `trans` array. If session is missing/invalid, propagates ConfD session errors.
-- `new_trans`: Requires an active local session cookie. Fails fast with a helpful error when no session is active.
-- `delete_trans`: Requires an active local session cookie. Fails fast with a helpful error when no session is active.
+- [`ping`](./docs/tools/ping.md): Basic health check, returns `pong`.
+- [`login`](./docs/tools/login.md): Calls ConfD `login`, stores `sessionid` cookie from `Set-Cookie`, returns session/challenge fields.
+- [`logout`](./docs/tools/logout.md): If no local session is set, returns `{}` without RPC call. If a session exists, calls ConfD `logout`, clears local cookie, and propagates ConfD errors.
+- [`get_trans`](./docs/tools/get_trans.md): Calls ConfD `get_trans` and returns transaction list. If there are no open transactions, returns an empty `trans` array. If session is missing/invalid, propagates ConfD session errors.
+- [`new_trans`](./docs/tools/new_trans.md): Requires an active local session cookie. Fails fast with a helpful error when no session is active.
+- [`delete_trans`](./docs/tools/delete_trans.md): Requires an active local session cookie. Fails fast with a helpful error when no session is active.
+
+## ConfD Configuration
+
+The tools call the ConfD JSON-RPC endpoint configured by:
+
+- `MCP_CONFD_URL`
+
+Defaults:
+
+- `MCP_CONFD_URL=http://127.0.0.1:8008/jsonrpc`
+
+Supported environment variables:
+
+- `MCP_CONFD_URL` (`http://...` or `https://...`)
+- `MCP_CONFD_USER`
+- `MCP_CONFD_PASSWORD`
+- `MCP_CONFD_IGNORE_SSL_ERRORS` (`true`/`1`/`yes` to skip TLS cert validation for self-signed HTTPS)
 
 ## Development
 
@@ -41,24 +58,3 @@ make build
 Run server:
 
 node dist/index.js
-
-## Tools
-
-See tool documentation in [docs/tools/README.md](docs/tools/README.md).
-
-## ConfD Configuration
-
-The tools call the ConfD JSON-RPC endpoint configured by:
-
-- `MCP_CONFD_URL`
-
-Defaults:
-
-- `MCP_CONFD_URL=http://127.0.0.1:8008/jsonrpc`
-
-Supported environment variables:
-
-- `MCP_CONFD_URL` (`http://...` or `https://...`)
-- `MCP_CONFD_USER`
-- `MCP_CONFD_PASSWORD`
-- `MCP_CONFD_IGNORE_SSL_ERRORS` (`true`/`1`/`yes` to skip TLS cert validation for self-signed HTTPS)
