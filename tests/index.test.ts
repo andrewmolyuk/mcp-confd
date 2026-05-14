@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createServer, startServer } from "../src/index";
 import { getSessionCookie, login, setSessionCookie } from "../src/tools/login";
+import { logout } from "../src/tools/logout";
 import { ping } from "../src/tools/ping";
 
 describe("index", () => {
@@ -21,7 +22,7 @@ describe("index", () => {
     const server = createServer();
 
     expect(server).toBeInstanceOf(McpServer);
-    expect(toolSpy).toHaveBeenCalledTimes(2);
+    expect(toolSpy).toHaveBeenCalledTimes(3);
 
     const [name, description, handler] = toolSpy.mock.calls[0] as [
       string,
@@ -62,6 +63,35 @@ describe("index", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ sessionid: "sess123" });
     expect(getSessionCookie()).toBe("sessionid=sess123; Path=/; HttpOnly");
+  });
+
+  it("calls ConfD logout with session cookie and clears local cookie", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+    );
+
+    const result = await logout();
+
+    expect(result).toEqual({});
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const request = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+    const headers = request.headers as Record<string, string>;
+    expect(headers.Cookie).toBe("sessionid=sess123");
+    expect(getSessionCookie()).toBeNull();
+  });
+
+  it("returns success logout when there is no active session cookie", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    await expect(logout()).resolves.toEqual({});
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("returns warning and challenge payload fields", async () => {

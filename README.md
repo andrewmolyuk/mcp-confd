@@ -12,7 +12,7 @@ Basic MCP server skeleton for ConfD integration.
 ## Features
 
 - MCP server over stdio
-- Tools: ping, login
+- Tools: ping, login, logout
 
 ## Development
 
