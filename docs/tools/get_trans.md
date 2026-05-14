@@ -28,7 +28,7 @@ Returns an empty `trans` array if there are no open transactions.
 
 - Calls ConfD JSON-RPC method `get_trans` on `/jsonrpc`.
 - Sends the active `sessionid` cookie if a login session exists.
-- Can be called without an active session (returns empty list).
+- Propagates ConfD session errors (for example `session.missing_sessionid` or `session.invalid_sessionid`) when no valid active session exists.
 
 ## Notes
 

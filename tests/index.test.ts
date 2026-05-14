@@ -134,7 +134,7 @@ describe("index", () => {
     expect(result.trans).toEqual([]);
   });
 
-  it("returns empty trans list from get_trans on invalid session", async () => {
+  it("propagates invalid session error from get_trans", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -146,9 +146,10 @@ describe("index", () => {
       ),
     );
 
-    const result = await getTrans();
-
-    expect(result.trans).toEqual([]);
+    await expect(getTrans()).rejects.toMatchObject({
+      name: "ConfdRpcError",
+      errorType: "session.invalid_sessionid",
+    });
   });
 
   it("creates a new read transaction via new_trans", async () => {

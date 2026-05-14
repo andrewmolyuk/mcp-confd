@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ConfdRpcError, getConfdJsonRpcUrlFromEnv } from "../shared/confdRpc.js";
+import { getConfdJsonRpcUrlFromEnv } from "../shared/confdRpc.js";
 import { callConfdJsonRpc } from "../shared/jsonRpcClient.js";
 
 export interface Transaction {
@@ -15,15 +15,8 @@ export interface GetTransResponse {
 }
 
 export async function getTrans(baseUrl = getConfdJsonRpcUrlFromEnv()): Promise<GetTransResponse> {
-	try {
-		const result = await callConfdJsonRpc<GetTransResponse>(baseUrl, "get_trans");
-		return result ?? { trans: [] };
-	} catch (e) {
-		if (e instanceof ConfdRpcError && e.errorType === "session.invalid_sessionid") {
-			return { trans: [] };
-		}
-		throw e;
-	}
+	const result = await callConfdJsonRpc<GetTransResponse>(baseUrl, "get_trans");
+	return result ?? { trans: [] };
 }
 
 export function registerGetTransTool(server: McpServer): void {
