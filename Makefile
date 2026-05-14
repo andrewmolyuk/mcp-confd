@@ -4,7 +4,7 @@ install:
 	bun install --no-audit --no-fund
 
 lint: install
-	bunx oxlint .
+	bunx oxlint . --ignore-pattern "docs/confd/**"
 
 test: lint
 	CI=CI node ./node_modules/vitest/vitest.mjs run --coverage
