@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
 	ConfdRpcError,
-	getOptionalTlsBypassFetchOptions,
+	fetchWithOptionalTlsBypass,
 	getConfdJsonRpcUrlFromEnv,
 	jsonRpcErrorMessage,
 	type JsonRpcErrorResponse,
@@ -64,7 +64,6 @@ export async function login(
 	baseUrl = getConfdJsonRpcUrlFromEnv(),
 ): Promise<LoginResponse> {
 	const { user, passwd } = getLoginCredentials(params);
-	const tlsBypassFetchOptions = await getOptionalTlsBypassFetchOptions(baseUrl);
 
 	const payload = {
 		jsonrpc: "2.0",
@@ -77,13 +76,12 @@ export async function login(
 		},
 	};
 
-	const response = await fetch(baseUrl, {
+	const response = await fetchWithOptionalTlsBypass(baseUrl, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify(payload),
-		...tlsBypassFetchOptions,
 	});
 
 	const responseBody = (await response.json()) as

@@ -351,7 +351,8 @@ describe("index", () => {
 
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
       expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
-      expect(init && "dispatcher" in (init as RequestInit)).toBe(true);
+      const requestInit = (init ?? {}) as Record<string, unknown>;
+      expect(Boolean(requestInit.dispatcher || requestInit.tls)).toBe(true);
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), {
         status: 200,
         headers: {

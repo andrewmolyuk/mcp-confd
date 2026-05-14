@@ -1,6 +1,6 @@
 import {
 	ConfdRpcError,
-	getOptionalTlsBypassFetchOptions,
+	fetchWithOptionalTlsBypass,
 	jsonRpcErrorMessage,
 	type JsonRpcErrorResponse,
 } from "./confdRpc.js";
@@ -52,12 +52,10 @@ export async function callConfdJsonRpc<T>(
 		body.params = params;
 	}
 
-	const tlsBypassFetchOptions = await getOptionalTlsBypassFetchOptions(baseUrl);
-	const response = await fetch(baseUrl, {
+	const response = await fetchWithOptionalTlsBypass(baseUrl, {
 		method: "POST",
 		headers,
 		body: JSON.stringify(body),
-		...tlsBypassFetchOptions,
 	});
 
 	const rawBody = await response.text();

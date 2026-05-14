@@ -54,6 +54,14 @@ export function shouldIgnoreTlsErrors(env: NodeJS.ProcessEnv = process.env): boo
 
 let insecureTlsDispatcher: unknown;
 
+type RuntimeWithBun = typeof globalThis & {
+	Bun?: object;
+};
+
+function isBunRuntime(): boolean {
+	return typeof (globalThis as RuntimeWithBun).Bun === "object";
+}
+
 async function getInsecureTlsDispatcher(): Promise<unknown> {
 	if (insecureTlsDispatcher !== undefined) {
 		return insecureTlsDispatcher;
@@ -77,7 +85,63 @@ export async function getOptionalTlsBypassFetchOptions(
 		return {};
 	}
 
+	if (isBunRuntime()) {
+		return {
+			tls: { rejectUnauthorized: false },
+		};
+	}
+
 	return {
 		dispatcher: await getInsecureTlsDispatcher(),
 	};
+}
+
+function shouldRetryWithLegacyTlsBypass(error: unknown): boolean {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	const message = error.message.toLowerCase();
+	return (
+		message.includes("unable to verify") ||
+		message.includes("certificate") ||
+		message.includes("self signed") ||
+		message.includes("dispatcher")
+	);
+}
+
+async function withLegacyTlsBypass<T>(action: () => Promise<T>): Promise<T> {
+	const previousTlsRejectUnauthorized = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+	process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
+	try {
+		return await action();
+	} finally {
+		if (typeof previousTlsRejectUnauthorized === "string") {
+			process.env.NODE_TLS_REJECT_UNAUTHORIZED = previousTlsRejectUnauthorized;
+		} else {
+			delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+		}
+	}
+}
+
+export async function fetchWithOptionalTlsBypass(
+	baseUrl: string,
+	init: RequestInit,
+): Promise<Response> {
+	const fetchOptions = await getOptionalTlsBypassFetchOptions(baseUrl);
+
+	try {
+		return await fetch(baseUrl, {
+			...init,
+			...fetchOptions,
+		});
+	} catch (error) {
+		const bypassTlsValidation = baseUrl.startsWith("https://") && shouldIgnoreTlsErrors();
+		if (!bypassTlsValidation || !shouldRetryWithLegacyTlsBypass(error)) {
+			throw error;
+		}
+
+		return withLegacyTlsBypass(async () => fetch(baseUrl, init));
+	}
 }
