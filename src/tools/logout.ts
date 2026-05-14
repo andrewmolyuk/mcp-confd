@@ -1,9 +1,9 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ConfdRpcError, getConfdJsonRpcUrlFromEnv } from "../shared/confdRpc.js";
 import { callConfdJsonRpc } from "../shared/jsonRpcClient.js";
 import { getSessionCookie, setSessionCookie } from "../shared/sessionCookie.js";
 
-export async function logout(baseUrl = getConfdJsonRpcUrlFromEnv()): Promise<{}> {
+export async function logout(baseUrl = getConfdJsonRpcUrlFromEnv()): Promise<Record<string, never>> {
 	const storedCookie = getSessionCookie();
 	if (typeof storedCookie !== "string" || storedCookie.length === 0) {
 		return {};
