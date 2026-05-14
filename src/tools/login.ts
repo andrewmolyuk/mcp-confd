@@ -1,9 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+	ConfdRpcError,
+	getOptionalTlsBypassFetchOptions,
 	getConfdJsonRpcUrlFromEnv,
 	jsonRpcErrorMessage,
-	withOptionalTlsBypass,
 	type JsonRpcErrorResponse,
 } from "../shared/confdRpc.js";
 import {
@@ -63,6 +64,7 @@ export async function login(
 	baseUrl = getConfdJsonRpcUrlFromEnv(),
 ): Promise<LoginResponse> {
 	const { user, passwd } = getLoginCredentials(params);
+	const tlsBypassFetchOptions = await getOptionalTlsBypassFetchOptions(baseUrl);
 
 	const payload = {
 		jsonrpc: "2.0",
@@ -75,22 +77,24 @@ export async function login(
 		},
 	};
 
-	const response = await withOptionalTlsBypass(baseUrl, async () =>
-		fetch(baseUrl, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(payload),
-		}),
-	);
+	const response = await fetch(baseUrl, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(payload),
+		...tlsBypassFetchOptions,
+	});
 
 	const responseBody = (await response.json()) as
 		| { result?: LoginResponse }
 		| JsonRpcErrorResponse;
 
 	if ("error" in responseBody && responseBody.error) {
-		throw new Error(jsonRpcErrorMessage(responseBody.error));
+		throw new ConfdRpcError(
+			jsonRpcErrorMessage(responseBody.error),
+			responseBody.error.type,
+		);
 	}
 
 	const cookies = getResponseCookies(response);

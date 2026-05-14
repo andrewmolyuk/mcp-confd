@@ -12,7 +12,17 @@ Basic MCP server skeleton for ConfD integration.
 ## Features
 
 - MCP server over stdio
-- Tools: ping, login, logout
+- Tools: ping, login, logout, get_trans, new_trans, delete_trans
+- Session-aware ConfD JSON-RPC integration with cookie-based authentication
+
+## Tool Behavior Notes
+
+- `ping`: Basic health check, returns `pong`.
+- `login`: Calls ConfD `login`, stores `sessionid` cookie from `Set-Cookie`, returns session/challenge fields.
+- `logout`: If no local session is set, returns `{}` without RPC call. If a session exists, calls ConfD `logout`, clears local cookie, and propagates ConfD errors.
+- `get_trans`: Calls ConfD `get_trans` and returns transaction list. If there are no open transactions, returns an empty `trans` array. If session is missing/invalid, propagates ConfD session errors.
+- `new_trans`: Requires an active local session cookie. Fails fast with a helpful error when no session is active.
+- `delete_trans`: Requires an active local session cookie. Fails fast with a helpful error when no session is active.
 
 ## Development
 

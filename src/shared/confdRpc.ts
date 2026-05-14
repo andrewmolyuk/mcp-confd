@@ -52,26 +52,32 @@ export function shouldIgnoreTlsErrors(env: NodeJS.ProcessEnv = process.env): boo
 	return normalizedValue === "1" || normalizedValue === "true" || normalizedValue === "yes";
 }
 
-export async function withOptionalTlsBypass<T>(
+let insecureTlsDispatcher: unknown;
+
+async function getInsecureTlsDispatcher(): Promise<unknown> {
+	if (insecureTlsDispatcher !== undefined) {
+		return insecureTlsDispatcher;
+	}
+
+	const undiciModule = await import("undici");
+	const AgentCtor = (undiciModule as { Agent?: new (options?: unknown) => unknown }).Agent;
+	if (typeof AgentCtor !== "function") {
+		throw new Error("MCP_CONFD_IGNORE_SSL_ERRORS requires undici Agent support");
+	}
+
+	insecureTlsDispatcher = new AgentCtor({ connect: { rejectUnauthorized: false } });
+	return insecureTlsDispatcher;
+}
+
+export async function getOptionalTlsBypassFetchOptions(
 	baseUrl: string,
-	action: () => Promise<T>,
-): Promise<T> {
+): Promise<Record<string, unknown>> {
 	const bypassTlsValidation = baseUrl.startsWith("https://") && shouldIgnoreTlsErrors();
-	const previousTlsRejectUnauthorized = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
-
-	if (bypassTlsValidation) {
-		process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+	if (!bypassTlsValidation) {
+		return {};
 	}
 
-	try {
-		return await action();
-	} finally {
-		if (bypassTlsValidation) {
-			if (typeof previousTlsRejectUnauthorized === "string") {
-				process.env.NODE_TLS_REJECT_UNAUTHORIZED = previousTlsRejectUnauthorized;
-			} else {
-				delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
-			}
-		}
-	}
+	return {
+		dispatcher: await getInsecureTlsDispatcher(),
+	};
 }

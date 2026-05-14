@@ -121,6 +121,28 @@ describe("index", () => {
     expect(result.trans[0]).toMatchObject({ db: "running", mode: "read_write", th: 2 });
   });
 
+  it("accepts minimal transaction shape from get_trans", async () => {
+    setSessionCookie("sessionid=sess123; Path=/; HttpOnly");
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: {
+            trans: [{ db: "running", th: 3 }],
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await getTrans();
+
+    expect(result.trans).toHaveLength(1);
+    expect(result.trans[0]).toEqual({ db: "running", th: 3 });
+  });
+
   it("returns empty trans list from get_trans when no open transactions", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -327,8 +349,9 @@ describe("index", () => {
     vi.stubEnv("MCP_CONFD_PASSWORD", "admin");
     vi.stubEnv("MCP_CONFD_IGNORE_SSL_ERRORS", "true");
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
-      expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBe("0");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
+      expect(init && "dispatcher" in (init as RequestInit)).toBe(true);
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }), {
         status: 200,
         headers: {
@@ -343,12 +366,53 @@ describe("index", () => {
     expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
   });
 
+  it("throws rpc.http_error when get_trans receives a non-JSON HTTP error response", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("Gateway down", {
+        status: 503,
+        statusText: "Service Unavailable",
+        headers: { "Content-Type": "text/plain" },
+      }),
+    );
+
+    await expect(getTrans()).rejects.toMatchObject({
+      name: "ConfdRpcError",
+      errorType: "rpc.http_error",
+    });
+  });
+
+  it("throws rpc.invalid_response when get_trans receives a malformed JSON body", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("not-json", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(getTrans()).rejects.toMatchObject({
+      name: "ConfdRpcError",
+      errorType: "rpc.invalid_response",
+    });
+  });
+
   it("fails when credentials are missing in both params and env", async () => {
     vi.stubEnv("MCP_CONFD_USER", "");
     vi.stubEnv("MCP_CONFD_PASSWORD", "");
     await expect(login({})).rejects.toThrow(
       "login requires user, provide params.user or MCP_CONFD_USER",
     );
+  });
+
+  it("isolates session cookies by session key", () => {
+    setSessionCookie("sessionid=defaultSess; Path=/; HttpOnly");
+    setSessionCookie("sessionid=otherSess; Path=/; HttpOnly", "client-b");
+
+    expect(getSessionCookie()).toBe("sessionid=defaultSess; Path=/; HttpOnly");
+    expect(getSessionCookie("client-b")).toBe("sessionid=otherSess; Path=/; HttpOnly");
+
+    setSessionCookie(null, "client-b");
+    expect(getSessionCookie("client-b")).toBeNull();
+    expect(getSessionCookie()).toBe("sessionid=defaultSess; Path=/; HttpOnly");
   });
 
 });

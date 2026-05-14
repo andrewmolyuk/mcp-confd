@@ -4,9 +4,9 @@ import { callConfdJsonRpc } from "../shared/jsonRpcClient.js";
 
 export interface Transaction {
 	db: "running" | "startup" | "candidate";
-	mode: "read" | "read_write";
-	conf_mode: "private" | "shared" | "exclusive";
-	tag: string;
+	mode?: "read" | "read_write";
+	conf_mode?: "private" | "shared" | "exclusive";
+	tag?: string;
 	th: number;
 }
 
