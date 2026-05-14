@@ -22,18 +22,16 @@ export async function logout(baseUrl = getConfdJsonRpcUrlFromEnv()): Promise<{}>
 	return {};
 }
 
-function parseLogoutToolArgs(args: unknown): Record<string, never> {
-	// Some MCP clients send metadata fields automatically. Ignore all inputs.
-	void args;
-	return {};
-}
-
 export function registerLogoutTool(server: McpServer): void {
-	server.tool("logout", "Removes the active ConfD session and invalidates session cookie.", async (args: unknown) => {
-		parseLogoutToolArgs(args);
-		const result = await logout();
-		return {
-			content: [{ type: "text", text: JSON.stringify(result) }],
-		};
-	});
+	server.tool(
+		"logout",
+		"Removes the active ConfD session and invalidates session cookie.",
+		{},
+		async () => {
+			const result = await logout();
+			return {
+				content: [{ type: "text", text: JSON.stringify(result) }],
+			};
+		},
+	);
 }

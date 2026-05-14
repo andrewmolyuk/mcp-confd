@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import {
 	getConfdJsonRpcUrlFromEnv,
 	jsonRpcErrorMessage,
@@ -11,11 +12,13 @@ import {
 } from "../shared/sessionCookie.js";
 export { getSessionCookie, setSessionCookie } from "../shared/sessionCookie.js";
 
-export interface LoginParams {
-	user?: string;
-	passwd?: string;
-	ack_warning?: boolean;
-}
+const LoginShape = {
+	user: z.string().optional(),
+	passwd: z.string().optional(),
+	ack_warning: z.boolean().optional(),
+};
+
+export type LoginParams = z.infer<z.ZodObject<typeof LoginShape>>;
 
 export interface LoginResponse {
 	warning?: string;
@@ -91,7 +94,7 @@ export async function login(
 	}
 
 	const cookies = getResponseCookies(response);
-	const sessionCookieHeader = cookies.find((cookie) => /(?:^|;\s*)sessionid=/i.test(cookie));
+	const sessionCookieHeader = cookies.find((cookie) => /(?:^|;\s*)sessionid(?:_\d+)?=/i.test(cookie));
 
 	if (sessionCookieHeader) {
 		setSessionCookie(sessionCookieHeader);
@@ -108,33 +111,13 @@ export async function login(
 	};
 }
 
-function parseLoginToolArgs(args: unknown): LoginParams {
-	const params = args as Partial<LoginParams>;
-	if ("user" in params && typeof params.user !== "string") {
-		throw new Error("login field user must be a string when provided");
-	}
-
-	if ("passwd" in params && typeof params.passwd !== "string") {
-		throw new Error("login field passwd must be a string when provided");
-	}
-
-	if ("ack_warning" in params && typeof params.ack_warning !== "boolean") {
-		throw new Error("login field ack_warning must be a boolean when provided");
-	}
-
-	return {
-		user: params.user,
-		passwd: params.passwd,
-		ack_warning: params.ack_warning,
-	};
-}
-
 export function registerLoginTool(server: McpServer): void {
 	server.tool(
 		"login",
 		"Creates a ConfD user session and returns warning/challenge details.",
-		async (args: unknown) => {
-			const result = await login(parseLoginToolArgs(args));
+		LoginShape,
+		async (params) => {
+			const result = await login(params);
 			return {
 				content: [{ type: "text", text: JSON.stringify(result) }],
 			};

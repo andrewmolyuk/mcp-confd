@@ -156,7 +156,7 @@ describe("index", () => {
 
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
-        JSON.stringify({ jsonrpc: "2.0", id: 1, result: 42 }),
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: { th: 42 } }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
@@ -343,6 +343,8 @@ describe("index", () => {
   });
 
   it("fails when credentials are missing in both params and env", async () => {
+    vi.stubEnv("MCP_CONFD_USER", "");
+    vi.stubEnv("MCP_CONFD_PASSWORD", "");
     await expect(login({})).rejects.toThrow(
       "login requires user, provide params.user or MCP_CONFD_USER",
     );

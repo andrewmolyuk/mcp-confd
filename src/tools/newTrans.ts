@@ -1,16 +1,19 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { ConfdRpcError, getConfdJsonRpcUrlFromEnv } from "../shared/confdRpc.js";
 import { callConfdJsonRpc } from "../shared/jsonRpcClient.js";
 import { getSessionCookie } from "../shared/sessionCookie.js";
 
-export interface NewTransParams {
-	db?: "running" | "startup" | "candidate";
-	mode?: "read" | "read_write";
-	conf_mode?: "private" | "shared" | "exclusive";
-	tag?: string;
-	action_path?: string;
-	on_pending_changes?: "reuse" | "reject" | "discard";
-}
+const NewTransShape = {
+	db: z.enum(["running", "startup", "candidate"]).optional(),
+	mode: z.enum(["read", "read_write"]).optional(),
+	conf_mode: z.enum(["private", "shared", "exclusive"]).optional(),
+	tag: z.string().optional(),
+	action_path: z.string().optional(),
+	on_pending_changes: z.enum(["reuse", "reject", "discard"]).optional(),
+};
+
+export type NewTransParams = z.infer<z.ZodObject<typeof NewTransShape>>;
 
 export interface NewTransResponse {
 	th: number;
@@ -36,8 +39,7 @@ export async function newTrans(
 		rpcParams.on_pending_changes = params.on_pending_changes;
 
 	try {
-		const th = await callConfdJsonRpc<number>(baseUrl, "new_trans", rpcParams);
-		return { th };
+		return await callConfdJsonRpc<NewTransResponse>(baseUrl, "new_trans", rpcParams);
 	} catch (e) {
 		if (e instanceof ConfdRpcError && e.errorType === "session.invalid_sessionid") {
 			throw new Error("new_trans requires an active session, call login first");
@@ -50,8 +52,8 @@ export function registerNewTransTool(server: McpServer): void {
 	server.tool(
 		"new_trans",
 		"Creates a new ConfD transaction and returns a transaction handle (th).",
-		async (args: unknown) => {
-			const params = (args ?? {}) as NewTransParams;
+		NewTransShape,
+		async (params) => {
 			const result = await newTrans(params);
 			return {
 				content: [{ type: "text", text: JSON.stringify(result) }],

@@ -9,15 +9,15 @@ export function setSessionCookie(cookie: string | null): void {
 }
 
 export function parseSessionIdFromCookie(cookie: string): string | undefined {
-	const sessionMatch = cookie.match(/(?:^|;\s*)sessionid=([^;]+)/i);
+	const sessionMatch = cookie.match(/(?:^|;\s*)sessionid(?:_\d+)?=([^;]+)/i);
 	return sessionMatch?.[1];
 }
 
 export function getRequestCookieHeaderValue(cookie: string): string {
-	const sessionId = parseSessionIdFromCookie(cookie);
-	if (!sessionId) {
+	const sessionMatch = cookie.match(/(?:^|;\s*)(sessionid(?:_\d+)?)=([^;]+)/i);
+	if (!sessionMatch) {
 		throw new Error("stored session cookie does not contain sessionid");
 	}
 
-	return `sessionid=${sessionId}`;
+	return `${sessionMatch[1]}=${sessionMatch[2]}`;
 }

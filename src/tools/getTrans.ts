@@ -30,6 +30,7 @@ export function registerGetTransTool(server: McpServer): void {
 	server.tool(
 		"get_trans",
 		"Lists all open ConfD transactions for the current session.",
+		{},
 		async () => {
 			const result = await getTrans();
 			return {

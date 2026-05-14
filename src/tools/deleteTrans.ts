@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { ConfdRpcError, getConfdJsonRpcUrlFromEnv } from "../shared/confdRpc.js";
 import { callConfdJsonRpc } from "../shared/jsonRpcClient.js";
 import { getSessionCookie } from "../shared/sessionCookie.js";
@@ -27,12 +28,9 @@ export function registerDeleteTransTool(server: McpServer): void {
 	server.tool(
 		"delete_trans",
 		"Deletes an open ConfD transaction by its transaction handle (th).",
-		async (args: unknown) => {
-			const params = args as { th: number };
-			if (typeof params.th !== "number") {
-				throw new Error("delete_trans requires a numeric th (transaction handle)");
-			}
-			const result = await deleteTrans(params.th);
+		{ th: z.number().int().describe("Transaction handle to delete") },
+		async ({ th }) => {
+			const result = await deleteTrans(th);
 			return {
 				content: [{ type: "text", text: JSON.stringify(result) }],
 			};
