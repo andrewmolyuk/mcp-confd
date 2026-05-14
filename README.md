@@ -32,28 +32,13 @@ Run server:
 
 node dist/index.js
 
-## Tool
+## Tools
 
-ping:
+See tool documentation in [docs/tools/README.md](docs/tools/README.md).
 
-- Input: none
-- Output: text "pong"
+## ConfD Configuration
 
-login:
-
-- Input:
-	- `user` (string, optional if `MCP_CONFD_USER` is set)
-	- `passwd` (string, optional if `MCP_CONFD_PASSWORD` is set)
-	- `ack_warning` (boolean, optional, default `false`)
-- Output: JSON string with optional fields:
-	- `warning`
-	- `challenge_id`
-	- `challenge_prompt`
-	- `sessionid` (parsed from `Set-Cookie`)
-
-### ConfD endpoint
-
-The `login` tool sends a JSON-RPC `login` request to:
+The login flow targets ConfD JSON-RPC endpoint:
 
 - `$MCP_CONFD_PROTOCOL://$MCP_CONFD_HOST:$MCP_CONFD_PORT/jsonrpc`
 

@@ -14,7 +14,7 @@ build: test
 	bunx tsc --build
 
 dev: install
-	npx @modelcontextprotocol/inspector bun --watch src/index.ts
+	bunx @modelcontextprotocol/inspector bun --watch src/index.ts
 
 update: 
 	bunx npm-check-updates -u 
